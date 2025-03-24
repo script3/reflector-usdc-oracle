@@ -1,2 +1,2 @@
-mod test_admin;
+mod test_init;
 mod test_lastprice;

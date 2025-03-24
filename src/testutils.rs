@@ -7,7 +7,7 @@ use sep_40_oracle::{
 };
 use soroban_sdk::{
     testutils::{Address as _, Ledger, LedgerInfo},
-    vec, Address, Env, Symbol, Vec,
+    vec, Address, Env, Vec,
 };
 pub mod oracle_aggregator {
     soroban_sdk::contractimport!(
@@ -59,8 +59,8 @@ impl EnvTestUtils for Env {
 /// Deploy an oracle aggreator contract
 pub fn create_oracle_aggregator<'a>(
     e: &Env,
-    admin: &Address,
-    base: &Asset,
+    oracle: &Address,
+    usdc: &Address,
     decimals: &u32,
     max_age: &u64,
 ) -> (Address, OracleAggregatorClient<'a>) {
@@ -68,7 +68,7 @@ pub fn create_oracle_aggregator<'a>(
     e.register_at(
         &oracle_aggregator_address,
         oracle_aggregator::WASM,
-        (admin, base.clone(), decimals, max_age),
+        (oracle, usdc.clone(), decimals, max_age),
     );
     let oracle_aggregator_client: OracleAggregatorClient<'a> =
         OracleAggregatorClient::new(&e, &oracle_aggregator_address);
@@ -82,60 +82,33 @@ pub fn create_oracle_aggregator<'a>(
 /// - (0 and 1 oracle, 2 oracle)
 pub fn setup_default_aggregator<'a>(
     e: &Env,
-    admin: &Address,
-    base: &Asset,
-    asset_0: &Asset,
-    asset_1: &Asset,
-    asset_2: &Asset,
-) -> (
-    OracleAggregatorClient<'a>,
-    MockPriceOracleClient<'a>,
-    MockPriceOracleClient<'a>,
-) {
-    let address_0 = Address::generate(&e);
-    let address_1 = Address::generate(&e);
-    let oracle_asset_0 = Asset::Stellar(address_0.clone());
-    let oracle_asset_1 = Asset::Stellar(address_1.clone());
-    let symbol_2 = Symbol::new(&e, "wETH");
-    let oracle_asset_2 = Asset::Other(symbol_2.clone());
-
-    // setup oracle with XLM and USDC proce
-    let oracle_0_1_id = Address::generate(&e);
-    e.register_at(&oracle_0_1_id, MockPriceOracleWASM, ());
-    let oracle_0_1 = MockPriceOracleClient::new(&e, &oracle_0_1_id);
-    oracle_0_1.set_data(
+    usdc: &Address,
+    asset_0: &Address,
+    asset_1: &Address,
+) -> (OracleAggregatorClient<'a>, MockPriceOracleClient<'a>) {
+    // setup oracle with XLM and USDC price
+    let oracle_id = Address::generate(&e);
+    e.register_at(&oracle_id, MockPriceOracleWASM, ());
+    let oracle = MockPriceOracleClient::new(&e, &oracle_id);
+    oracle.set_data(
         &Address::generate(&e),
-        &MockAsset::Other(Symbol::new(&e, "BASE")),
+        &MockAsset::Stellar(usdc.clone()),
         &Vec::from_array(
             &e,
             [
-                MockAsset::Stellar(address_0.clone()),
-                MockAsset::Stellar(address_1.clone()),
+                MockAsset::Stellar(asset_0.clone()),
+                MockAsset::Stellar(asset_1.clone()),
             ],
         ),
         &9,
         &300,
     );
 
-    let oracle_2_id = Address::generate(&e);
-    e.register_at(&oracle_2_id, MockPriceOracleWASM, ());
-    let oracle_2 = MockPriceOracleClient::new(&e, &oracle_2_id);
-    oracle_2.set_data(
-        &Address::generate(&e),
-        &MockAsset::Other(Symbol::new(&e, "BASE")),
-        &Vec::from_array(&e, [MockAsset::Other(symbol_2)]),
-        &6,
-        &600,
-    );
+    oracle.set_price(&vec![&e, 0i128, 0i128], &0);
 
-    oracle_0_1.set_price(&vec![&e, 0i128, 0i128], &0);
-    oracle_2.set_price(&vec![&e, 0i128], &0);
+    let (_, aggregator_client) = create_oracle_aggregator(e, &oracle_id, usdc, &7, &900);
 
-    let (_, aggregator_client) = create_oracle_aggregator(e, admin, base, &7, &900);
-    aggregator_client.add_asset(&asset_0, &oracle_0_1_id, &oracle_asset_0);
-    aggregator_client.add_asset(&asset_1, &oracle_0_1_id, &oracle_asset_1);
-    aggregator_client.add_asset(&asset_2, &oracle_2_id, &oracle_asset_2);
-    return (aggregator_client, oracle_0_1, oracle_2);
+    return (aggregator_client, oracle);
 }
 
 pub fn assert_assets_equal(a: Asset, b: Asset) -> bool {

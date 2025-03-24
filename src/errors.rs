@@ -4,8 +4,6 @@ use soroban_sdk::contracterror;
 pub enum OracleAggregatorErrors {
     NotImplemented = 100,
     InvalidAssetOracle = 101,
-    MaxAssetsExceeded = 102,
-    AssetExists = 103,
-    AssetNotFound = 104,
-    InvalidMaxAge = 105,
+    InvalidMaxAge = 102,
+    InvalidBaseAsset = 103,
 }

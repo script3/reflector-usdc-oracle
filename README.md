@@ -1,12 +1,12 @@
-# Oracle Aggregator
+# Reflector USDC Oracle
 
-Example Oracle Aggregator that can be used with Blend pools. This contract allows one Blend pool to access multiple oracle prices sources from one location via `lastprice` method.
+This Oracle Aggregator is intended to be used with a Reflector Oracle that reports price in USDC. The price of USDC is hard coded to return 1 with the desired number of decimals. 
 
 ### Supported Oracles
 
-This Oracle Aggregator contract makes a few assumptions about the oracles it can support:
+This Reflector USDC Oracle Aggregator contract makes a few assumptions about the oracles it can support:
 
-* Oracle must have the same base asset as the aggregator (e.g. USD)
+* Oracle must report price in usdc
 * Oracle must support SEP-40 `lastprice(asset: Address)`, and it should return the most recently reported price by the oracle
 * If `lastprice(asset: Address)` can return `None` intermittently, like in the event of the most recent round being missed, the oracle must support SEP-40 `price(asset: Address, timestamp: u64)`, and it should return the most recently reported price on or before the timestamp given
 
@@ -14,20 +14,10 @@ This Oracle Aggregator contract makes a few assumptions about the oracles it can
 
 The oracle aggregator uses some global configuration defined through the constructor:
 
-* admin `Address` - The admin has the ability to add additional assets to the oracle aggregator. This should be done cautiosly, as they can never be removed or edited.
-* base `Asset` - The base asset the oracle aggregator will report prices in
+* oracle_id `Address` - The address of the reflector oracle
+* usdc_id `Address` - The address of the USDC asset
 * decimals `u32` - The decimals the oracle aggregator will report prices in
 * max_age `u64` - The maximum age (in seconds) of a fetched price the oracle aggregator will return from the current ledger timestamp. This must be between 360s (6m) and 3600s (60m).
-
-Each supported asset is defined via an AssetConfig:
-
-**Asset Config**
-* asset `Asset` - The asset to be used when fetching the price
-* oracle_id `Address` - The address of the source oracle
-* decimals `u32` - The decimals of the source oracle
-* resolution `u32` - The resolution of the source oracle (in seconds)
-
-Up to 50 additional assets can be supported.
 
 ### Last Price Method
 

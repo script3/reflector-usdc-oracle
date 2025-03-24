@@ -1,12 +1,11 @@
-use crate::types::AssetConfig;
+use crate::types::OracleConfig;
 use sep_40_oracle::Asset;
-use soroban_sdk::{contracttype, unwrap::UnwrapOptimized, Address, Env, Symbol, Vec};
+use soroban_sdk::{contracttype, unwrap::UnwrapOptimized, Address, Env, Symbol};
 
-const ADMIN_KEY: &str = "Admin";
-const ASSETS_KEY: &str = "Assets";
-const BASE_KEY: &str = "Base";
+const ORACLE_KEY: &str = "Oracle";
 const DECIMALS_KEY: &str = "Decimals";
 const MAX_AGE_KEY: &str = "MaxAge";
+const USDC_KEY: &str = "USDC";
 
 const ONE_DAY_LEDGERS: u32 = 17280; // assumes 5 seconds per ledger on average
 const LEDGER_THRESHOLD: u32 = 30 * ONE_DAY_LEDGERS;
@@ -29,21 +28,6 @@ pub fn extend_instance(e: &Env) {
 
 /********** Instance **********/
 
-/// Set the admin address
-pub fn set_admin(e: &Env, admin: &Address) {
-    e.storage()
-        .instance()
-        .set::<Symbol, Address>(&Symbol::new(e, ADMIN_KEY), &admin);
-}
-
-/// Get the admin address
-pub fn get_admin(e: &Env) -> Address {
-    e.storage()
-        .instance()
-        .get::<Symbol, Address>(&Symbol::new(e, ADMIN_KEY))
-        .unwrap_optimized()
-}
-
 /// Set the max age of a price, in seconds
 pub fn set_max_age(e: &Env, max_age: &u64) {
     e.storage()
@@ -57,21 +41,6 @@ pub fn get_max_age(e: &Env) -> u64 {
         .instance()
         .get::<Symbol, u64>(&Symbol::new(e, MAX_AGE_KEY))
         .unwrap_optimized()
-}
-
-/// Set the base asset for the oracle aggregator
-pub fn set_base(e: &Env, base: &Asset) {
-    e.storage()
-        .instance()
-        .set::<Symbol, Asset>(&Symbol::new(e, BASE_KEY), base);
-}
-
-/// Get the base asset for the oracle aggregator
-pub fn get_base(e: &Env) -> Asset {
-    e.storage()
-        .instance()
-        .get::<Symbol, Asset>(&Symbol::new(e, BASE_KEY))
-        .unwrap()
 }
 
 /// Set the number of decimals the oracle will report prices in
@@ -89,43 +58,32 @@ pub fn get_decimals(e: &Env) -> u32 {
         .unwrap()
 }
 
-/// Set a list of assets
-pub fn set_assets(e: &Env, assets: &Vec<Asset>) {
+/// Set the USDC asset address
+pub fn set_usdc(e: &Env, usdc: &Address) {
     e.storage()
         .instance()
-        .set::<Symbol, Vec<Asset>>(&Symbol::new(e, ASSETS_KEY), assets);
+        .set::<Symbol, Address>(&Symbol::new(e, USDC_KEY), usdc);
 }
 
-/// Get a list of assets
-pub fn get_assets(e: &Env) -> Vec<Asset> {
+/// Get the USDC asset address
+pub fn get_usdc(e: &Env) -> Address {
     e.storage()
         .instance()
-        .get::<Symbol, Vec<Asset>>(&Symbol::new(e, ASSETS_KEY))
+        .get::<Symbol, Address>(&Symbol::new(e, USDC_KEY))
         .unwrap()
 }
 
-/********** Persistent **********/
-
-/// Set an asset configuration
-pub fn set_asset_config(e: &Env, asset: &Asset, config: &AssetConfig) {
-    let key = AggregatorDataKey::Asset(asset.clone());
+/// Set the oracle config
+pub fn set_oracle_config(e: &Env, config: &OracleConfig) {
     e.storage()
-        .persistent()
-        .set::<AggregatorDataKey, AssetConfig>(&key, config);
-    e.storage()
-        .persistent()
-        .extend_ttl(&key, LEDGER_THRESHOLD, LEDGER_BUMP);
+        .instance()
+        .set::<Symbol, OracleConfig>(&Symbol::new(e, ORACLE_KEY), config);
 }
 
-/// Get an asset configuration
-pub fn get_asset_config(e: &Env, asset: &Asset) -> Option<AssetConfig> {
-    let key = AggregatorDataKey::Asset(asset.clone());
-    if let Some(result) = e.storage().persistent().get(&key) {
-        e.storage()
-            .persistent()
-            .extend_ttl(&key, LEDGER_THRESHOLD, LEDGER_BUMP);
-        result
-    } else {
-        None
-    }
+/// Get the oracle config
+pub fn get_oracle_config(e: &Env) -> OracleConfig {
+    e.storage()
+        .instance()
+        .get::<Symbol, OracleConfig>(&Symbol::new(e, ORACLE_KEY))
+        .unwrap()
 }

@@ -1,19 +1,20 @@
-use sep_40_oracle::{PriceData, PriceFeedClient};
+use sep_40_oracle::{Asset, PriceData, PriceFeedClient};
 use soroban_sdk::Env;
 
-use crate::{storage, types::AssetConfig};
+use crate::storage;
 
 /// Fetch a price based on the asset config
-pub fn get_price(e: &Env, config: &AssetConfig) -> Option<PriceData> {
+pub fn get_price(e: &Env, asset: &Asset) -> Option<PriceData> {
+    let config = storage::get_oracle_config(e);
     let oracle = PriceFeedClient::new(e, &config.oracle_id);
-    let mut price: Option<PriceData> = oracle.lastprice(&config.asset);
+    let mut price: Option<PriceData> = oracle.lastprice(asset);
     let decimals = storage::get_decimals(e);
     let oldest_timestamp = e.ledger().timestamp() - storage::get_max_age(e);
     if price.is_none() {
         let mut next_timestamp = e.ledger().timestamp() - config.resolution as u64;
         // attempt to use the `price` method to get an older price if price is None
         while price.is_none() && next_timestamp >= oldest_timestamp {
-            price = oracle.price(&config.asset, &next_timestamp);
+            price = oracle.price(asset, &next_timestamp);
             next_timestamp -= config.resolution as u64;
         }
     }
